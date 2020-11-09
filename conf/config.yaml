@@ -1,5 +1,6 @@
 runMode: debug
 addr: :9002
+sign: 
 rabbit:
   port: 5672
   host: localhost
@@ -13,3 +14,18 @@ token:
   sign: hgfyewtr
   issue: sai
   ttl: 600
+db:
+  name: im
+  host: 127.0.0.1:3306
+  username: root
+  password: 111111
+  charset: utf8mb4
+  log: 0
+redis:
+  host: 127.0.0.1
+  port: 6379
+  auth: 
+  db: 5
+  MaxActive: 32
+  MaxIdle: 8
+  IdleTimeout: 5

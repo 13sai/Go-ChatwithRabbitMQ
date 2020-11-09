@@ -9,6 +9,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 	jwt "github.com/dgrijalva/jwt-go"
+
+	"local.com/sai0556/Go-ChatwithRabbitMQ/model"
+	"local.com/sai0556/Go-ChatwithRabbitMQ/util"
 )
 
 func Login(c *gin.Context) {
@@ -24,13 +27,30 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	token, err := issueToken(form.Username, form.Password);
+	var user = model.User{}
+	db := model.DB
+	db.Where("nickname = ?", form.Username).First(&user)
 
+	if user.Id < 1 {
+		fmt.Println(user)
+		SendResponse(c, 2001, "昵称或密码不匹配", nil)
+		return
+	}
+
+	if user.Password != util.Md5(util.StrCombine(viper.GetString("sign"), form.Password)) {
+		fmt.Println(user)
+		SendResponse(c, 2002, "昵称或密码不匹配", nil)
+		return
+	}
+
+	token, err := issueToken(form.Username, form.Password);
 	if err != nil {
 		SendResponse(c, 1001, "签名生成失败", nil)
 		return
 	}
 
+	redisClient := model.GetRedis()
+	redisClient.HSet(model.Ctx, model.GetKey("register"), token, user.Id)
 	SendResponse(c, 0, "登录成功", token)
 }
 

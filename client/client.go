@@ -6,8 +6,13 @@ import (
 	"time"
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"net/url"
 	
 	"github.com/gorilla/websocket"
+	
+	"local.com/sai0556/Go-ChatwithRabbitMQ/util"
+	"local.com/sai0556/Go-ChatwithRabbitMQ/model"
 )
 
 type Hub struct {
@@ -15,21 +20,29 @@ type Hub struct {
 	clients map[*Client]bool
 
 	// Inbound messages from the clients.
-	broadcast chan []byte
+	broadcast chan broadcastStruct
 
 	// Register requests from the clients.
 	register chan *Client
 
 	// Unregister requests from clients.
 	unregister chan *Client
+
+	private chan wsRequest
+}
+
+type broadcastStruct struct {
+	clientId string
+	message []byte
 }
 
 func NewHub() *Hub {
 	return &Hub{
-		broadcast:  make(chan []byte),
+		broadcast:  make(chan broadcastStruct),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
 		clients:    make(map[*Client]bool),
+		private:    make(chan wsRequest),
 	}
 }
 
@@ -43,10 +56,17 @@ func (h *Hub) Run() {
 				delete(h.clients, client)
 				close(client.send)
 			}
+		case wsReq := <-h.private:
+			for client := range h.clients {
+				if client.UserId == wsReq.ClientId {
+					client.send <- jsonRes(0, wsReq.Message, 2, false)
+					break;
+				}
+			}
 		case message := <-h.broadcast:
 			for client := range h.clients {
 				select {
-				case client.send <- message:
+				case client.send <- jsonRes(0, string(message.message), 2, client.UserId == message.clientId):
 				default:
 					close(client.send)
 					delete(h.clients, client)
@@ -93,6 +113,8 @@ type Client struct {
 
 	// Buffered channel of outbound messages.
 	send chan []byte
+
+	UserId string
 }
 
 // readPump pumps messages from the websocket connection to the hub.
@@ -103,7 +125,7 @@ type Client struct {
 func (c *Client) readPump() {
 	defer func() {
 		c.hub.unregister <- c
-		c.hub.broadcast <- jsonRes(0, "old leave", -1)
+		c.hub.broadcast <- broadcastStruct{"0", []byte("old leave")}
 		c.conn.Close()
 	}()
 	c.conn.SetReadLimit(maxMessageSize)
@@ -118,7 +140,18 @@ func (c *Client) readPump() {
 			break
 		}
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
-		c.hub.broadcast <- message
+		var msgFormat wsRequest
+		err = json.Unmarshal(message, &msgFormat)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		if len(msgFormat.ClientId) < 1 {
+			c.hub.broadcast <- broadcastStruct{c.UserId ,[]byte(msgFormat.Message)}
+		} else {
+			c.hub.private <- msgFormat
+		}
 	}
 }
 
@@ -131,12 +164,10 @@ func (c *Client) writePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
-		c.hub.broadcast <- jsonRes(0, "old leave", -1)
 		c.conn.Close()
 	}()
-
 	
-	c.hub.broadcast <- jsonRes(0, "new coming", -1)
+	c.hub.broadcast <- broadcastStruct{"0", []byte("new coming")}
 
 	for {
 		select {
@@ -180,7 +211,18 @@ func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
-	client := &Client{hub: hub, conn: conn, send: make(chan []byte, 256)}
+
+	queryForm, err := url.ParseQuery(r.URL.RawQuery)
+	if err != nil || len(queryForm["token"]) < 0 {
+		fmt.Println(queryForm)
+		fmt.Println(err)
+		return 
+	}
+
+	redisClient := model.GetRedis()
+	uid, err := redisClient.HGet(model.Ctx, model.GetKey("register"), queryForm["token"][0]).Result()
+
+	client := &Client{hub: hub, conn: conn, send: make(chan []byte, 256), UserId: (uid)}
 	client.hub.register <- client
 
 	// Allow collection of memory referenced by the caller by doing all work in
@@ -193,10 +235,17 @@ type response struct {
 	Code int `json:"code"`
 	Message string `json:"message"`
 	Type int `json:"type"`
+	Mine bool `json:"mine"`
+	Timestamp int64 `json:"timestamp"`
 }
 
-func jsonRes(code int, msg string, msgType int) []byte {
-	ret := response{code, msg, msgType}
+func jsonRes(code int, msg string, msgType int, btn bool) []byte {
+	ret := response{code, msg, msgType, btn, util.GetTimeStamp()}
 	res, _ := json.Marshal(ret)
 	return res
+}
+
+type wsRequest struct {
+	ClientId string `json:"clientId"`
+	Message string `json:"message"`
 }

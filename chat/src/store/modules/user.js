@@ -6,8 +6,7 @@ const state = {
   token: getToken(),
   name: '',
   avatar: '',
-  introduction: '',
-  grade: 0,
+  id: 0,
   roles: []
 }
 

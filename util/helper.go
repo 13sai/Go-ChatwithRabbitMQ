@@ -1,8 +1,11 @@
 package util
 
 import (
+	"fmt"
 	"bytes"
 	"log"
+	"time"	
+	"crypto/md5"
 )
 
 func FailOnError(err error, msg string) {
@@ -19,4 +22,12 @@ func StrCombine(str ...string) string {
     }
 	//获得拼接后的字符串
 	return bt.String()
+}
+
+func GetTimeStamp() int64 {
+	return time.Now().Unix()
+}
+
+func Md5(str string) string {
+	return fmt.Sprintf("%x", md5.Sum([]byte(str)));
 }

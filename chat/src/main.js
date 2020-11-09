@@ -8,9 +8,11 @@ import store from './store'
 import './permission' // permission control
 
 import Vant from 'vant';
+import Toast from 'vant';
 import 'vant/lib/index.css';
 
 Vue.use(Vant);
+Vue.use(Toast);
 
 Vue.config.productionTip = false
 
