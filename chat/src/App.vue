@@ -1,5 +1,6 @@
 <template>
   <div id="app">
+    <div class=""></div>
     <router-view/>
   </div>
 </template>
@@ -13,7 +14,11 @@ export default {
 <style>
 html {
     height: 100%;
-    background: #ddd;
+    background: #fff;
+}
+body {
+    height: 100%;
+    background: #ccc;
 }
 #app {
   font-family: 'Avenir', Helvetica, Arial, sans-serif;
@@ -22,5 +27,9 @@ html {
   text-align: center;
   color: #2c3e50;
   position: relative;
+  max-width: 375px;
+  margin: 0 auto;
+  /* border: 1px solid #ededed; */
+  /* border-bottom: 0; */
 }
 </style>

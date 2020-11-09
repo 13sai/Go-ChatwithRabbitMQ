@@ -38,7 +38,6 @@ func main() {
 	// redis
 	model.RedisInit()
 
-
 	ws := server.WebSocket{}
 	go ws.Start()
 

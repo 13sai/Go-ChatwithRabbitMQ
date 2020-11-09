@@ -125,7 +125,7 @@ type Client struct {
 func (c *Client) readPump() {
 	defer func() {
 		c.hub.unregister <- c
-		c.hub.broadcast <- broadcastStruct{"0", []byte("old leave")}
+		// c.hub.broadcast <- broadcastStruct{"0", []byte("old leave")}
 		c.conn.Close()
 	}()
 	c.conn.SetReadLimit(maxMessageSize)
@@ -151,6 +151,7 @@ func (c *Client) readPump() {
 			c.hub.broadcast <- broadcastStruct{c.UserId ,[]byte(msgFormat.Message)}
 		} else {
 			c.hub.private <- msgFormat
+			c.send <- jsonRes(0, msgFormat.Message, 2, true)
 		}
 	}
 }
@@ -167,7 +168,7 @@ func (c *Client) writePump() {
 		c.conn.Close()
 	}()
 	
-	c.hub.broadcast <- broadcastStruct{"0", []byte("new coming")}
+	// c.hub.broadcast <- broadcastStruct{"0", []byte("new coming")}
 
 	for {
 		select {

@@ -14,8 +14,15 @@ const mutations = {
   SET_TOKEN: (state, token) => {
     state.token = token
   },
+  SET_AVATAR: (state, avatar) => {
+    state.avatar = avatar
+  },
   SET_NAME: (state, name) => {
     state.name = name
+  },
+  SET_INFO: (state, info) => {
+    state.avatar = info.avatar;
+    state.name = info.name;
   }
 }
 
@@ -26,9 +33,9 @@ const actions = {
     return new Promise((resolve, reject) => {
       login({ username: username.trim(), password: password }).then(response => {
           const { data } = response
-          commit('SET_TOKEN', data)
-          commit('SET_NAME', username.trim())
-          setToken(data)
+          console.log(data)
+          commit('SET_INFO', data)
+          setToken(data.token)
         resolve()
       }).catch(error => {
         console.log(error)
@@ -46,8 +53,9 @@ const actions = {
         if (!data) {
           reject('Verification failed, please Login again.')
         }
+        console.log(data)
 
-        commit('SET_NAME', data.username)
+        commit('SET_INFO', data)
         resolve(data)
       }).catch(error => {
         reject(error)

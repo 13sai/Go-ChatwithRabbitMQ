@@ -21,7 +21,13 @@ func Load(g *gin.Engine) *gin.Engine {
 	
 	g.Use(Cors())
 	g.POST("/login", server.Login)
-	g.GET("/user/info", server.Info)
+
+	api := g.Group("") 
+	{
+		api.Use(Auth())
+		api.GET("/user/info", server.Info)
+		api.GET("/chat/list", server.ChatList)
+	}
 
 	return g
 }

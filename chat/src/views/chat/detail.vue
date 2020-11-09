@@ -1,21 +1,24 @@
 <template>
   <div class="message">
     <van-nav-bar
-      title="开放聊天室"
+      :title="clientName"
       class="nav"
+      left-text="返回"
+      left-arrow
+      @click-left="onClickLeft"
     />
     <ul class="message-ul">
-        <li v-for="item in list">
+        <li v-for="(item, i) in list" :key="i">
             <!-- <p class="time">
                 <span>{{ item.date | time }}</span>
             </p> -->
             <div class="main2" v-if="item.mine">
                 <div class="text">{{ item.message }}</div>
-                <img class="avatar" src="https://ss0.bdstatic.com/70cFuHSh_Q1YnxGkpoWK1HF6hhy/it/u=2422475850,1168377142&fm=15&gp=0.jpg" />
+                <img class="avatar" :src="avatar"/>
             </div>
             <div class="main" v-else>
                 <div class="text">{{ item.message }}</div>
-                <img class="avatar" src="https://ss1.bdstatic.com/70cFvXSh_Q1YnxGkpoWK1HF6hhy/it/u=1128428061,2613189316&fm=15&gp=0.jpg" />
+                <img class="avatar" :src="clientAvatar"/>
             </div>
         </li>
     </ul>
@@ -25,10 +28,8 @@
                 v-model="value"
                 rows="2"
                 autosize
-                type="textarea"
-                maxlength="50"
+                type="input"
                 placeholder="请输入留言"
-                show-word-limit
             >
                 <template #button>
                     <van-button size="small" type="primary" @click="send">发送</van-button>
@@ -45,56 +46,61 @@ import { getToken } from "@/utils/auth";
 export default {
   data() {
     return {
-      username: this.$store.getters.name,
+      avatar: this.$store.getters.avatar,
       finished: false,
       value: '',
-      clientId: '',
+      clientId: this.$route.params.id,
+      clientAvatar: this.$route.query.avatar,
+      clientName: this.$route.query.name,
       mineId: '',
       list: [
-        
       ]
     };
   },
   created() {
+    this.initWebSocket();
+    console.log(this.$route.params.id)
+  },
+  destroyed() {
+    this.websock.close() //离开路由之后断开websocket连接
+  },
+  methods: {
+    initWebSocket(){ //初始化weosocket
+      const wsuri = "ws://127.0.0.1:9003/ws?token="+getToken();
+      this.websock = new WebSocket(wsuri);
+      this.websock.onmessage = this.websocketonmessage;
+      this.websock.onopen = this.websocketonopen;
+      this.websock.onerror = this.websocketonerror;
+      this.websock.onclose = this.websocketclose;
+    },
+    send() {
+      this.websocketsend();
+    },
+    websocketonopen(){ //连接建立之后执行send方法发送数据
+    },
+    websocketonerror(){//连接建立失败重连
       this.initWebSocket();
     },
-    destroyed() {
-      this.websock.close() //离开路由之后断开websocket连接
+    websocketonmessage(e){ //数据接收
+      const redata = JSON.parse(e.data);
+      this.list.push(redata)
     },
-    methods: {
-      initWebSocket(){ //初始化weosocket
-        const wsuri = "ws://127.0.0.1:9003/ws?token="+getToken();
-        this.websock = new WebSocket(wsuri);
-        this.websock.onmessage = this.websocketonmessage;
-        this.websock.onopen = this.websocketonopen;
-        this.websock.onerror = this.websocketonerror;
-        this.websock.onclose = this.websocketclose;
-      },
-      send() {
-        this.websocketsend();
-      },
-      websocketonopen(){ //连接建立之后执行send方法发送数据
-      },
-      websocketonerror(){//连接建立失败重连
-        this.initWebSocket();
-      },
-      websocketonmessage(e){ //数据接收
-        const redata = JSON.parse(e.data);
-        this.list.push(redata)
-      },
-      websocketsend(){//数据发送
-        if (this.value.length < 1) {
-            this.$toast("请输入内容");
-            return false;
-        }
-        let actions = {"clientId":this.clientId, "message": this.value};
-        this.websock.send(JSON.stringify(actions));
-        this.value = "";
-      },
-      websocketclose(e){  //关闭
-        console.log('断开连接',e);
-      },
+    websocketsend(){//数据发送
+      if (this.value.length < 1) {
+          this.$toast("请输入内容");
+          return false;
+      }
+      let actions = {"clientId":this.clientId, "message": this.value};
+      this.websock.send(JSON.stringify(actions));
+      this.value = "";
     },
+    websocketclose(e){  //关闭
+      console.log('断开连接');
+    },
+    onClickLeft() {
+      this.$router.push({path: "/chat/list"})
+    },
+  },
 };
 </script>
 
@@ -102,7 +108,7 @@ export default {
 .message .nav {
   background: #07c160;
 }
-.message .nav .van-nav-bar__title {
+.message .nav .van-nav-bar__title, .van-nav-bar__text,  .van-nav-bar__arrow {
   color: #fff!important;
 }
 .chat-container{
@@ -114,10 +120,11 @@ export default {
     overflow-y: scroll;
 }
 .message-ul {
-    margin-top: 2rem;
+    margin-top: 10px;
 }
 .message li {
-  margin: 1rem;
+  margin: 5px;
+  font-size: 20px;
 }
 .message .main {
     text-align: left;
@@ -139,7 +146,6 @@ export default {
     position: relative;
     margin-right: 10px;
     background: #fff;
-    line-height: 24px;
     border-radius: 4px;
     padding: 4px;
     display: inline-block;
@@ -157,7 +163,6 @@ export default {
     position: relative;
     margin-left: 10px;
     background: #fff;
-    line-height: 24px;
     border-radius: 4px;
     padding: 4px;
     display: inline-block;
@@ -176,5 +181,6 @@ export default {
     position: fixed;
     bottom: 0;
     width: 100%;
+    max-width: 375px;
 }
 </style>

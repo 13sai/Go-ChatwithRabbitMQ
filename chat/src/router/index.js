@@ -11,12 +11,17 @@ export const constantRoutes = [
   },
   {
     path: '/',
-    redirect: '/chat' 
+    redirect: '/chat/list' 
   },
   {
-    path: '/chat',
-    name: 'chat',
-    component: () => import('@/views/chat/index'),
+    path: '/chat/detail/:id',
+    name: 'chatDetail',
+    component: () => import('@/views/chat/detail'),
+  },
+  {
+    path: '/chat/list',
+    name: 'chatDetail',
+    component: () => import('@/views/chat/list'),
   }
 ]
 

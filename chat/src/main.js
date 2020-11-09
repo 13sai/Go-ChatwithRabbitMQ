@@ -10,6 +10,8 @@ import './permission' // permission control
 import Vant from 'vant';
 import Toast from 'vant';
 import 'vant/lib/index.css';
+// import './utils/rem';
+import 'amfe-flexible'
 
 Vue.use(Vant);
 Vue.use(Toast);

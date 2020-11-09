@@ -15,11 +15,12 @@ service.interceptors.request.use(
   config => {
     // do something before request is sent
     config.headers['X-Requested-With'] = 'XMLHttpRequest'
-    if (store.getters.token) {
+    let token = getToken()
+    if (token) {
       // let each request carry token
       // ['X-Token'] is a custom headers key
       // please modify it according to the actual situation
-      config.headers['Authorization'] = 'Bearer ' + getToken() // 让每个请求携带token--['X-Token']为自定义key 请根据实际情况自行修改
+      config.headers['Authorization'] = 'Bearer ' + token // 让每个请求携带token--['X-Token']为自定义key 请根据实际情况自行修改
     }
     return config
   },
